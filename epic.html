@@ -1,0 +1,148 @@
+import random
+import time
+from typing import List, Tuple
+
+class Character:
+    def __init__(self, name: str, battle_power: int, char_type: str, abilities: List[str], speed: int):
+        self.name = name
+        self.battle_power = battle_power
+        self.type = char_type
+        self.abilities = abilities
+        self.health = 100
+        self.damage_dealt = 0
+        self.speed = speed
+        self.status_effects = []
+
+    def take_damage(self, damage: int):
+        self.health = max(0, self.health - damage)
+
+    def heal(self, amount: int):
+        self.health = min(100, self.health + amount)
+
+    def add_status_effect(self, effect: str, duration: int):
+        self.status_effects.append((effect, duration))
+
+    def update_status_effects(self):
+        self.status_effects = [(effect, duration - 1) for effect, duration in self.status_effects if duration > 1]
+
+    def is_alive(self) -> bool:
+        return self.health > 0
+
+class AINarrator:
+    @staticmethod
+    def narrate(action: str):
+        print(f"\n* {action} *")
+        time.sleep(1)
+
+    @staticmethod
+    def dynamic_narration(attacker: Character, action: str, target: Character, damage: int, critical: bool = False, missed: bool = False):
+        if missed:
+            AINarrator.narrate(f"{attacker.name}'s {action} **misses** {target.name}!")
+        elif critical:
+            AINarrator.narrate(f"**CRITICAL HIT**! {attacker.name} smashes {target.name} with {action}, dealing {damage} damage!")
+        elif target.health <= 0:
+            AINarrator.narrate(f"**{target.name} is DEFEATED** by {attacker.name}'s {action}!")
+        else:
+            AINarrator.narrate(f"{attacker.name} uses {action} on {target.name}, dealing {damage} damage.")
+
+class Battle:
+    def __init__(self, team1: List[Character], team2: List[Character]):
+        self.team1 = team1
+        self.team2 = team2
+        self.narrator = AINarrator()
+
+    def start(self):
+        self.narrator.narrate("The battle begins under a stormy sky!")
+        round_num = 1
+        while not self.is_game_over():
+            print(f"\n---- ROUND {round_num} ----")
+            self.play_round()
+            round_num += 1
+        self.announce_winner()
+
+    def play_round(self):
+        all_characters = self.team1 + self.team2
+        turn_order = sorted(all_characters, key=lambda x: x.speed, reverse=True)
+        for character in turn_order:
+            if character.is_alive():
+                defending_team = self.team2 if character in self.team1 else self.team1
+                self.perform_action(character, defending_team)
+            character.update_status_effects()
+
+    def perform_action(self, attacker: Character, defending_team: List[Character]):
+        action = random.choice(attacker.abilities)
+        target = random.choice([member for member in defending_team if member.is_alive()])
+        damage, critical, missed = self.calculate_damage(attacker)
+
+        if not missed:
+            target.take_damage(damage)
+            attacker.damage_dealt += damage
+
+        self.narrator.dynamic_narration(attacker, action, target, damage, critical, missed)
+
+        # Check for special effects
+        if action == "Healing Touch":
+            heal_amount = random.randint(10, 20)
+            attacker.heal(heal_amount)
+            self.narrator.narrate(f"{attacker.name} uses Healing Touch and restores {heal_amount} health!")
+
+    def calculate_damage(self, attacker: Character) -> Tuple[int, bool, bool]:
+        base_damage = random.randint(5, 20)
+        damage = base_damage + attacker.battle_power // 10
+        critical = random.random() < 0.1
+        missed = random.random() < 0.05
+
+        if critical:
+            damage *= 2
+        if missed:
+            damage = 0
+
+        return damage, critical, missed
+
+    def is_game_over(self) -> bool:
+        return all(not member.is_alive() for member in self.team1) or all(not member.is_alive() for member in self.team2)
+
+    def announce_winner(self):
+        if all(not member.is_alive() for member in self.team1):
+            self.narrator.narrate("**Team 2 WINS!**")
+        else:
+            self.narrator.narrate("**Team 1 WINS!**")
+
+def create_character_roster() -> List[Character]:
+    return [
+        Character("Scarlet Witch", 83, "magic", ["Reality Manipulation", "Chaos Magic", "Energy Projection"], 75),
+        Character("Luke Cage", 75, "brawler", ["Superhuman Strength", "Unbreakable Skin", "Healing Touch"], 60),
+        Character("Jessica Jones", 70, "brawler", ["Enhanced Strength", "Durability Boost", "Flight"], 65),
+        Character("Daredevil", 68, "agile", ["Enhanced Senses", "Martial Arts", "Acrobatics"], 80),
+        Character("Captain Marvel", 85, "cosmic", ["Energy Manipulation", "Superhuman Strength", "Flight"], 85),
+        Character("Ant-Man", 77, "tech", ["Size Manipulation", "Insect Control", "Quantum Realm Access"], 70)
+    ]
+
+def main():
+    print("Welcome to the Marvel Team Battle Simulator!")
+    player_name = input("What's your name, commander? ")
+    print(f"Greetings, Commander {player_name}! Let's assemble your team.")
+
+    character_roster = create_character_roster()
+    player_team = []
+    ai_team = random.sample(character_roster, 3)  # AI team takes three random characters from the roster
+
+    print("\nAvailable characters:")
+    for i, char in enumerate(character_roster, 1):
+        print(f"{i}. {char.name} (Type: {char.type}, Battle Power: {char.battle_power})")
+
+    for _ in range(3):
+        choice = int(input("Choose a character for your team (enter the number): ")) - 1
+        player_team.append(character_roster[choice])
+        character_roster.pop(choice)
+
+    print("\nYour team:")
+    for char in player_team:
+        print(f"- {char.name}")
+
+    print("\nPrepare for battle!")
+    battle = Battle(player_team, ai_team)
+    battle.start()
+
+if __name__ == "__main__":
+    main()
