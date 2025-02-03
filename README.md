@@ -1,7 +1,4 @@
-Here's a README.txt file for Epic AI Battle (EAIB):
 
-
----
 
 Epic AI Battle (EAIB) - README
 
